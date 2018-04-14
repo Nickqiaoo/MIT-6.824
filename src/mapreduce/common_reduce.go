@@ -94,6 +94,7 @@ func doReduce(
 			enc.Encode(KeyValue{key, reduceF(key,value)})
 			key=v.Key
 			value=make([]string,0)
+			value=append(value,v.Value)
 		}
 	}
 	enc.Encode(KeyValue{key, reduceF(key,value)})
