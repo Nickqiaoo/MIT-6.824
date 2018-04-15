@@ -1,9 +1,9 @@
 package mapreduce
 
 import (
-	"time"
 	"fmt"
 	"sync"
+	"time"
 )
 
 //
@@ -43,17 +43,29 @@ func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, re
 			go func(j int) {
 				wg.Add(1)
 				args := &DoTaskArgs{jobName, mapFiles[j], phase, j, n_other}
-				call(worker1, "Worker.DoTask", args, nil)
-				wg.Done()
-				workers <- worker1
+				if !call(worker1, "Worker.DoTask", args, nil) {
+					worker1 = <-registerChan
+					call(worker1, "Worker.DoTask", args, nil)
+					wg.Done()
+					workers <- worker1
+				} else {
+					wg.Done()
+					workers <- worker1
+				}
 			}(i)
 		case worker2 := <-workers:
 			go func(j int) {
 				wg.Add(1)
-				args := &DoTaskArgs{jobName, mapFiles[j], phase,j, n_other}
-				call(worker2, "Worker.DoTask", args, nil)
-				wg.Done()
-				registerChan <- worker2
+				args := &DoTaskArgs{jobName, mapFiles[j], phase, j, n_other}
+				if !call(worker2, "Worker.DoTask", args, nil) {
+					worker2 = <-workers
+					call(worker2, "Worker.DoTask", args, nil)
+					wg.Done()
+					registerChan <- worker2
+				} else {
+					wg.Done()
+					registerChan <- worker2
+				}
 			}(i)
 		}
 	}
