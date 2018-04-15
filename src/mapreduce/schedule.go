@@ -3,7 +3,6 @@ package mapreduce
 import (
 	"fmt"
 	"sync"
-	"time"
 )
 
 //
@@ -34,40 +33,30 @@ func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, re
 	//
 	// Your code here (Part III, Part IV).
 	//
+	workers := make(chan string, 2)
 	var wg sync.WaitGroup
-	workers := make(chan string)
-	time.Sleep(5)
+	var worker string
 	for i := 0; i < ntasks; i++ {
 		select {
-		case worker1 := <-registerChan:
-			go func(j int) {
-				wg.Add(1)
-				args := &DoTaskArgs{jobName, mapFiles[j], phase, j, n_other}
-				if !call(worker1, "Worker.DoTask", args, nil) {
-					worker1 = <-registerChan
-					call(worker1, "Worker.DoTask", args, nil)
-					wg.Done()
-					workers <- worker1
-				} else {
-					wg.Done()
-					workers <- worker1
-				}
-			}(i)
-		case worker2 := <-workers:
-			go func(j int) {
-				wg.Add(1)
-				args := &DoTaskArgs{jobName, mapFiles[j], phase, j, n_other}
-				if !call(worker2, "Worker.DoTask", args, nil) {
-					worker2 = <-workers
-					call(worker2, "Worker.DoTask", args, nil)
-					wg.Done()
-					registerChan <- worker2
-				} else {
-					wg.Done()
-					registerChan <- worker2
-				}
-			}(i)
+		case worker = <-workers:
+		case worker = <-registerChan:
 		}
+		go func(j int, worker string) {
+			wg.Add(1)
+			args := &DoTaskArgs{jobName, mapFiles[j], phase, j, n_other}
+			for {
+				if call(worker, "Worker.DoTask", args, nil) {
+					workers <- worker
+					wg.Done()
+					break
+				} else {
+					select {
+					case worker = <-workers:
+					case worker = <-registerChan:
+					}
+				}
+			}
+		}(i, worker)
 	}
 	wg.Wait()
 	fmt.Printf("Schedule: %v done\n", phase)
