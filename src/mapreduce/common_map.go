@@ -64,7 +64,7 @@ func doMap(
 		log.Fatal("open fail")
 	}
 	content,_:=ioutil.ReadAll(file1)
-	keyvalue := mapF("test", string(content))
+	keyvalue := mapF(inFile, string(content))
 
 	for j := 0; j < nReduce; j++ {
 		filex, err := os.Create(reduceName(jobName, mapTask, j))
