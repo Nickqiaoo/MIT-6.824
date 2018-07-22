@@ -17,8 +17,11 @@ package raft
 //   in the same server.
 //
 
-import "sync"
-import "labrpc"
+import (
+	"time"
+	"sync"
+	"labrpc"
+)
 
 // import "bytes"
 // import "labgob"
@@ -42,6 +45,11 @@ type ApplyMsg struct {
 	CommandIndex int
 }
 
+type LogEntry struct{
+	Term int
+	Command interface{}
+}
+
 //
 // A Go object implementing a single Raft peer.
 //
@@ -51,6 +59,17 @@ type Raft struct {
 	persister *Persister          // Object to hold this peer's persisted state
 	me        int                 // this peer's index into peers[]
 
+	currentTerm int
+	votedFor int
+	log[] LogEntry
+
+	commitIndex int
+	lastApplied int
+
+	nextIndex[] int
+	matchIndex[] int
+
+	timer *time.Timer
 	// Your data here (2A, 2B, 2C).
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
@@ -107,14 +126,33 @@ func (rf *Raft) readPersist(data []byte) {
 	// }
 }
 
+type AppendEntriesArgs struct{
+	term int
+	leaderId int 
+	prevLogIndex int
+	prevLogTerm int
+	entries[] LogEntry
+	leaderCommit int
+}
 
+type AppendEntriesReply struct{
+	term int
+	success bool
+}
 
+func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
+	// Your code here (2A, 2B).
+}
 
 //
 // example RequestVote RPC arguments structure.
 // field names must start with capital letters!
 //
 type RequestVoteArgs struct {
+	term int 
+	candidateId int 
+	lastLogIndex int 
+	lastLogTerm int
 	// Your data here (2A, 2B).
 }
 
@@ -123,6 +161,8 @@ type RequestVoteArgs struct {
 // field names must start with capital letters!
 //
 type RequestVoteReply struct {
+	term int
+	voteGranted int
 	// Your data here (2A).
 }
 
@@ -201,6 +241,10 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 //
 func (rf *Raft) Kill() {
 	// Your code here, if desired.
+}
+
+func resetTimer(){
+
 }
 
 //
