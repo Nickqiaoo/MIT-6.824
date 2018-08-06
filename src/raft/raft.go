@@ -312,7 +312,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	}
 	if args.Term > rf.currentTerm {
 		if (len(rf.log) > 1 && ((rf.log[len(rf.log)-1].Term < args.LastLogTerm) ||
-			(rf.log[len(rf.log)-1].Term == args.LastLogTerm && len(rf.log)-1 < args.LastLogIndex))) ||
+			(rf.log[len(rf.log)-1].Term == args.LastLogTerm && len(rf.log)-1 <= args.LastLogIndex))) ||
 			len(rf.log) == 1 {
 			DPrintf("%d become follower", rf.me)
 			rf.state = Follower
@@ -327,7 +327,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 
 	if rf.votedFor == -1 || rf.votedFor == args.CandidateId {
 		if (len(rf.log) > 1 && ((rf.log[len(rf.log)-1].Term < args.LastLogTerm) ||
-			(rf.log[len(rf.log)-1].Term == args.LastLogTerm && len(rf.log)-1 < args.LastLogIndex))) ||
+			(rf.log[len(rf.log)-1].Term == args.LastLogTerm && len(rf.log)-1 <= args.LastLogIndex))) ||
 			len(rf.log) == 1 {
 			DPrintf("%d become follower", rf.me)
 			rf.state = Follower
