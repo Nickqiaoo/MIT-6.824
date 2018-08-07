@@ -18,10 +18,13 @@ package raft
 //
 
 import (
+	"bytes"
 	"labrpc"
 	"math/rand"
 	"sync"
 	"time"
+
+	"MIT6.824/src/labgob"
 )
 
 // import "bytes"
@@ -118,6 +121,13 @@ func (rf *Raft) persist() {
 	// e.Encode(rf.yyy)
 	// data := w.Bytes()
 	// rf.persister.SaveRaftState(data)
+	w := new(bytes.Buffer)
+	e := labgob.NewEncoder(w)
+	e.Encode(rf.currentTerm)
+	e.Encode(rf.votedFor)
+	e.Encode(rf.log)
+	data := w.Bytes()
+	rf.persister.SaveRaftState(data)
 }
 
 //
@@ -140,6 +150,12 @@ func (rf *Raft) readPersist(data []byte) {
 	//   rf.xxx = xxx
 	//   rf.yyy = yyy
 	// }
+	r := bytes.NewBuffer(data)
+	d := labgob.NewDecoder(r)
+	d.Decode(&rf.currentTerm)
+	d.Decode(&rf.votedFor)
+	d.Decode(&rf.log)
+	
 }
 
 type AppendEntriesArgs struct {
@@ -203,6 +219,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 			reply.Success = true
 		}
 	}
+	rf.persist()
 	rf.resetTimer()
 }
 
@@ -320,6 +337,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 			rf.votedFor = args.CandidateId
 			reply.Term = rf.currentTerm
 			reply.VoteGranted = true
+			rf.persist()
 			rf.resetTimer()
 			return
 		}
@@ -335,6 +353,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 			rf.votedFor = args.CandidateId
 			reply.Term = rf.currentTerm
 			reply.VoteGranted = true
+			rf.persist()
 			rf.resetTimer()
 			return
 		}
@@ -454,7 +473,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	index = len(rf.log) - 1
 	term = rf.currentTerm
 	// Your code here (2B).
-
+	rf.persist()
 	return index, term, isLeader
 }
 
@@ -477,7 +496,7 @@ func (rf *Raft) handleTimer() {
 		rf.currentTerm += 1
 		rf.votedFor = rf.me
 		rf.sumofvote = 1
-
+		rf.persist()
 		args := &RequestVoteArgs{rf.currentTerm, rf.me, 0, 0}
 		if len(rf.log) > 1 {
 			args.LastLogIndex = len(rf.log) - 1
@@ -545,6 +564,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.applyCh = applyCh
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
+	rf.persist()
 	rf.timer = time.NewTimer(time.Millisecond * time.Duration(ElectionMinTime+rand.Intn(150)))
 	go func() {
 		for {
