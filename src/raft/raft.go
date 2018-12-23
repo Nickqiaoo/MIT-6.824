@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"MIT6.824/src/labgob"
+	"labgob"
 )
 
 // import "bytes"

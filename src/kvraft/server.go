@@ -22,6 +22,11 @@ type Op struct {
 	// Your definitions here.
 	// Field names must start with capital letters,
 	// otherwise RPC will break.
+	Type string
+	Key string 
+	Value string
+	ClientId int64
+	Seq int
 }
 
 type KVServer struct {
