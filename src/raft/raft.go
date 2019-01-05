@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"MIT6.824/src/labgob"
+	"labgob"
 )
 
 // import "bytes"
@@ -155,7 +155,7 @@ func (rf *Raft) readPersist(data []byte) {
 	d.Decode(&rf.currentTerm)
 	d.Decode(&rf.votedFor)
 	d.Decode(&rf.log)
-	
+
 }
 
 type AppendEntriesArgs struct {
@@ -323,27 +323,32 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	defer rf.mu.Unlock()
 
 	reply.Term = rf.currentTerm
-	if args.Term < rf.currentTerm {
-		reply.VoteGranted = false
-		return
-	}
+	reply.VoteGranted = false
 	if args.Term > rf.currentTerm {
-		if (len(rf.log) > 1 && ((rf.log[len(rf.log)-1].Term < args.LastLogTerm) ||
-			(rf.log[len(rf.log)-1].Term == args.LastLogTerm && len(rf.log)-1 <= args.LastLogIndex))) ||
-			len(rf.log) == 1 {
-			DPrintf("%d become follower", rf.me)
-			rf.state = Follower
-			rf.currentTerm = args.Term
-			rf.votedFor = args.CandidateId
-			reply.Term = rf.currentTerm
-			reply.VoteGranted = true
-			rf.persist()
-			rf.resetTimer()
-			return
+		rf.state = Follower
+		rf.currentTerm = args.Term
+		rf.votedFor = -1
+	}
+
+	if args.Term >= rf.currentTerm {
+		if rf.votedFor == -1 || rf.votedFor == args.CandidateId {
+			if (len(rf.log) > 1 && ((rf.log[len(rf.log)-1].Term < args.LastLogTerm) ||
+				(rf.log[len(rf.log)-1].Term == args.LastLogTerm && len(rf.log)-1 <= args.LastLogIndex))) ||
+				len(rf.log) == 1 {
+				DPrintf("%d become follower", rf.me)
+				rf.state = Follower
+				rf.currentTerm = args.Term
+				rf.votedFor = args.CandidateId
+				reply.Term = rf.currentTerm
+				reply.VoteGranted = true
+				rf.persist()
+				rf.resetTimer()
+				return
+			}
 		}
 	}
 
-	if rf.votedFor == -1 || rf.votedFor == args.CandidateId {
+	/*if rf.votedFor == -1 || rf.votedFor == args.CandidateId {
 		if (len(rf.log) > 1 && ((rf.log[len(rf.log)-1].Term < args.LastLogTerm) ||
 			(rf.log[len(rf.log)-1].Term == args.LastLogTerm && len(rf.log)-1 <= args.LastLogIndex))) ||
 			len(rf.log) == 1 {
@@ -357,8 +362,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 			rf.resetTimer()
 			return
 		}
-	}
-	reply.VoteGranted = false
+	}*/
 }
 
 //
